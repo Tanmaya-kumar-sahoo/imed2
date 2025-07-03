@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/hono/(.*)",
+      "destination": "/api/hono"
+    }
+  ],
+  "env": {
+    "NODEJS_HELPERS": "0"
+  },
+  "functions": {
+    "src/app/api/hono/route.ts": {
+      "runtime": "edge"
+    }
+  }
+} 

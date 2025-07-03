@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "@libsql/client": "^0.15.9",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@types/uuid": "^10.0.0",
+    "dotenv": "^17.0.0",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.8.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.18.1"
+  }
+}

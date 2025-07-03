@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Patient Preset Test</title>
+</head>
+<body>
+    <h1>Patient Preset Test</h1>
+    
+    <div>
+        <h2>1. Login</h2>
+        <input type="email" id="email" placeholder="Email" value="koushikchodraju008@gmail.com">
+        <input type="password" id="password" placeholder="Password" value="testpassword123">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+    
+    <div>
+        <h2>2. Test GET Presets</h2>
+        <button onclick="getPresets()">Get Presets</button>
+        <div id="getResult"></div>
+    </div>
+    
+    <div>
+        <h2>3. Test POST Preset</h2>
+        <input type="text" id="presetName" placeholder="Name" value="Test Patient">
+        <input type="number" id="presetAge" placeholder="Age" value="30">
+        <select id="presetGender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+        </select>
+        <button onclick="createPreset()">Create Preset</button>
+        <div id="createResult"></div>
+    </div>
+
+    <script>
+        async function login() {
+            try {
+                const formData = new FormData();
+                formData.append('email', document.getElementById('email').value);
+                formData.append('password', document.getElementById('password').value);
+                
+                const response = await fetch('/api/auth/signin/credentials', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                const result = await response.text();
+                document.getElementById('loginResult').innerHTML = `Status: ${response.status}<br>Response: ${result}`;
+                console.log('Login response:', response);
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = `Error: ${error.message}`;
+                console.error('Login error:', error);
+            }
+        }
+        
+        async function getPresets() {
+            try {
+                const response = await fetch('/api/patient-presets', {
+                    credentials: 'include'
+                });
+                
+                const result = await response.text();
+                document.getElementById('getResult').innerHTML = `Status: ${response.status}<br>Response: ${result}`;
+                console.log('Get presets response:', response);
+            } catch (error) {
+                document.getElementById('getResult').innerHTML = `Error: ${error.message}`;
+                console.error('Get presets error:', error);
+            }
+        }
+        
+        async function createPreset() {
+            try {
+                const preset = {
+                    name: document.getElementById('presetName').value,
+                    age: document.getElementById('presetAge').value,
+                    gender: document.getElementById('presetGender').value
+                };
+                
+                const response = await fetch('/api/patient-presets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(preset),
+                    credentials: 'include'
+                });
+                
+                const result = await response.text();
+                document.getElementById('createResult').innerHTML = `Status: ${response.status}<br>Response: ${result}`;
+                console.log('Create preset response:', response);
+            } catch (error) {
+                document.getElementById('createResult').innerHTML = `Error: ${error.message}`;
+                console.error('Create preset error:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

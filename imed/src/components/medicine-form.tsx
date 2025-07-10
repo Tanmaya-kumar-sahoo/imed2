@@ -29,6 +29,16 @@ import { Select as BasicSelect } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import React from "react";
+
+// Add Medicine type for AI output
+interface Medicine {
+  name: string;
+  prescription?: boolean;
+  description?: string;
+  dose?: string;
+  quantity?: number | string;
+}
 
 export function MedicineForm() {
   const [loading, setLoading] = useState(false);
@@ -407,6 +417,75 @@ Severity: ${severity}`;
       toast.error(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper to robustly extract JSON from AI result
+  function robustParseAIResult(resultText: string): any | null {
+    // Try direct JSON parse
+    try {
+      return JSON.parse(resultText);
+    } catch {}
+    // Try to extract JSON object from within text
+    const objMatch = resultText.match(/\{[\s\S]*"Medicines JSON"[\s\S]*\}/);
+    if (objMatch) {
+      try {
+        return JSON.parse(objMatch[0]);
+      } catch {}
+    }
+    return null;
+  }
+
+  // Use robust parser
+  const parsedResult = result ? robustParseAIResult(result) : null;
+
+  // Local state for editable medicines list
+  const [editableMeds, setEditableMeds] = useState<Medicine[]>([]);
+
+  // When parsedResult changes, initialize editableMeds
+  useEffect(() => {
+    const newMeds = parsedResult && parsedResult["Medicines JSON"] && Array.isArray(parsedResult["Medicines JSON"])
+      ? parsedResult["Medicines JSON"]
+      : [];
+    if (JSON.stringify(newMeds) !== JSON.stringify(editableMeds)) {
+      setEditableMeds(newMeds);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
+
+  // Handlers for editing/removing medicines
+  const handleMedChange = (idx: number, newMed: Medicine) => {
+    setEditableMeds((meds) => meds.map((m, i) => (i === idx ? newMed : m)));
+  };
+  const handleRemove = (idx: number) => {
+    setEditableMeds((meds) => meds.filter((_, i) => i !== idx));
+  };
+
+  const handleAddMedicine = () => {
+    setEditableMeds((meds) => [
+      ...meds,
+      { name: '', dose: '', quantity: '', description: '', prescription: false }
+    ]);
+  };
+
+  const handleVerifyRecommendation = async () => {
+    try {
+      const res = await fetch('/api/verify-recommendation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          medicines: editableMeds,
+          patient: healthProfile,
+          recommendation: parsedResult,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Recommendation verified and saved!');
+      } else {
+        toast.error('Failed to verify recommendation.');
+      }
+    } catch (err) {
+      toast.error('Error verifying recommendation.');
     }
   };
 
@@ -794,11 +873,94 @@ Severity: ${severity}`;
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
-            ) : result ? (
-              <div className="prose prose-blue max-w-full">
-                <div className="whitespace-pre-wrap">
-                  {result}
+            ) : parsedResult && editableMeds.length > 0 ? (
+              <div>
+                {parsedResult["Possible Condition"] && (
+                  <div style={{ marginBottom: 16, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    Possible Condition: <span style={{ fontWeight: 'normal' }}>{parsedResult["Possible Condition"]}</span>
+                  </div>
+                )}
+                <h3 className="font-semibold text-lg mb-2">Medicines & Quantity</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+                    <thead>
+                      <tr style={{ background: '#f3f4f6' }}>
+                        <th style={{ padding: 8, border: '1px solid #e5e7eb' }}>Name</th>
+                        <th style={{ padding: 8, border: '1px solid #e5e7eb' }}>Dose</th>
+                        <th style={{ padding: 8, border: '1px solid #e5e7eb' }}>Quantity</th>
+                        <th style={{ padding: 8, border: '1px solid #e5e7eb' }}>Description</th>
+                        <th style={{ padding: 8, border: '1px solid #e5e7eb' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editableMeds.map((med, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: 8, border: '1px solid #e5e7eb' }}>
+                            <input
+                              type="text"
+                              value={med.name}
+                              onChange={e => handleMedChange(idx, { ...med, name: e.target.value })}
+                              placeholder="Name"
+                              style={{ width: '100%' }}
+                            />
+                          </td>
+                          <td style={{ padding: 8, border: '1px solid #e5e7eb' }}>
+                            <input
+                              type="text"
+                              value={med.dose || ''}
+                              onChange={e => handleMedChange(idx, { ...med, dose: e.target.value })}
+                              placeholder="Dose"
+                              style={{ width: '100%' }}
+                            />
+                          </td>
+                          <td style={{ padding: 8, border: '1px solid #e5e7eb' }}>
+                            <input
+                              type="text"
+                              value={med.quantity || ''}
+                              onChange={e => handleMedChange(idx, { ...med, quantity: e.target.value })}
+                              placeholder="Quantity"
+                              style={{ width: '100%' }}
+                            />
+                          </td>
+                          <td style={{ padding: 8, border: '1px solid #e5e7eb' }}>
+                            <input
+                              type="text"
+                              value={med.description || ''}
+                              onChange={e => handleMedChange(idx, { ...med, description: e.target.value })}
+                              placeholder="Description"
+                              style={{ width: '100%' }}
+                            />
+                          </td>
+                          <td style={{ padding: 8, border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                            <button onClick={() => handleRemove(idx)} style={{ color: 'red', fontSize: 20, border: 'none', background: 'none', cursor: 'pointer' }}>❌</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleAddMedicine}
+                  style={{
+                    background: '#2563eb', color: 'white', padding: '8px 16px', borderRadius: 4, border: 'none', cursor: 'pointer', fontWeight: 500
+                  }}
+                >
+                  + Add Medicine
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifyRecommendation}
+                  style={{
+                    background: '#22c55e', color: 'white', padding: '8px 16px', borderRadius: 4, border: 'none', cursor: 'pointer', fontWeight: 500, marginLeft: 8
+                  }}
+                >
+                  ✓ Verify
+                </button>
+              </div>
+            ) : !parsedResult && result ? (
+              <div className="text-red-600 text-center my-4">
+                Sorry, we couldn't process the recommendations. Please try again or rephrase your symptoms.
               </div>
             ) : (
               <div className="text-center text-muted-foreground h-64 flex flex-col items-center justify-center">

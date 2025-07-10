@@ -23,13 +23,23 @@ export default function ProfilePage() {
 
   // Fetch user recommendations
   useEffect(() => {
-    // No longer fetch recommendations from database
-    // Recommendations now only come from AI and are not stored
-    setRecommendations([]);
-    setLoading(false);
-    
-    // Informative console message
-    console.log("Recommendations now only come directly from AI and are not stored");
+    if (status === "authenticated" && session?.user) {
+      setLoading(true);
+      fetch("/api/recommendations")
+        .then(res => res.json())
+        .then(data => {
+          setRecommendations(data.recommendations || []);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to fetch recommendations", err);
+          setRecommendations([]);
+          setLoading(false);
+        });
+    } else if (status === "unauthenticated") {
+      setRecommendations([]);
+      setLoading(false);
+    }
   }, [session, status]);
 
   // Show loading state while checking authentication or firebase user
@@ -95,7 +105,19 @@ export default function ProfilePage() {
                           <div className="flex justify-between items-center">
                             <CardTitle className="text-lg">{rec.condition}</CardTitle>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(rec.timestamp || rec.createdAt?.toDate()).toLocaleDateString()}
+                              {rec.createdAt
+                                ? (() => {
+                                    if (typeof rec.createdAt === "number") {
+                                      // If it's a UNIX timestamp in seconds, convert to ms
+                                      const ms = rec.createdAt < 1e12 ? rec.createdAt * 1000 : rec.createdAt;
+                                      return new Date(ms).toLocaleDateString();
+                                    } else if (typeof rec.createdAt === "string") {
+                                      return new Date(rec.createdAt).toLocaleDateString();
+                                    } else {
+                                      return "N/A";
+                                    }
+                                  })()
+                                : "N/A"}
                             </span>
                           </div>
                         </CardHeader>

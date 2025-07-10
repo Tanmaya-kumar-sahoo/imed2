@@ -203,7 +203,18 @@ export async function saveRecommendation(data: any) {
  * Get recommendations for a user
  */
 export async function getUserRecommendations(userId: string) {
-  return await db.select().from(recommendations)
+  return await db.select({
+    id: recommendations.id,
+    userId: recommendations.userId,
+    conditionId: recommendations.conditionId,
+    symptoms: recommendations.symptoms,
+    age: recommendations.age,
+    gender: recommendations.gender,
+    severity: recommendations.severity,
+    additionalAdvice: recommendations.additionalAdvice,
+    isEmergency: recommendations.isEmergency,
+    createdAt: recommendations.createdAt,
+  }).from(recommendations)
     .where(eq(recommendations.userId, userId))
     .orderBy(recommendations.createdAt);
 }

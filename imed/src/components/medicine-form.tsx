@@ -40,7 +40,7 @@ interface Medicine {
   quantity?: number | string;
 }
 
-export function MedicineForm() {
+export function MedicineForm({ initialPatient, readOnly: initialReadOnly = false }: { initialPatient?: any, readOnly?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +48,7 @@ export function MedicineForm() {
   const [usingAI, setUsingAI] = useState(true);
   const [aiSettings, setAiSettings] = useState<any>(null);
   const [currentVoiceField, setCurrentVoiceField] = useState<string>("");
+  const [readOnly, setReadOnly] = useState(initialReadOnly);
   const showLegacyFields = false;
 
   // Health profile (replacing patient presets)
@@ -283,6 +284,16 @@ export function MedicineForm() {
     })();
   }, [isGuest, form]);
 
+  // Pre-fill form with patient data if provided
+  useEffect(() => {
+    if (initialPatient) {
+      form.setValue("age", initialPatient.age ? String(initialPatient.age) : "");
+      form.setValue("conditions", initialPatient.chronicConditions || "");
+      form.setValue("severity", "normal");
+      // You can add more fields as needed
+    }
+  }, [initialPatient]);
+
   // Safe error handler function to avoid undefined/null issues
   const safeErrorHandler = (error: any): string => {
     // Default error message
@@ -489,6 +500,44 @@ Severity: ${severity}`;
     }
   };
 
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileFields, setProfileFields] = useState({
+    height: initialPatient?.height || '',
+    weight: initialPatient?.weight || '',
+    bloodType: initialPatient?.bloodType || '',
+    allergies: initialPatient?.allergies || '',
+    chronicConditions: initialPatient?.chronicConditions || '',
+    medications: initialPatient?.medications || '',
+  });
+
+  useEffect(() => {
+    if (initialPatient) {
+      setProfileFields({
+        height: initialPatient.height || '',
+        weight: initialPatient.weight || '',
+        bloodType: initialPatient.bloodType || '',
+        allergies: initialPatient.allergies || '',
+        chronicConditions: initialPatient.chronicConditions || '',
+        medications: initialPatient.medications || '',
+      });
+    }
+  }, [initialPatient]);
+
+  const handleProfileSave = async () => {
+    if (!initialPatient?.id) return;
+    const res = await fetch(`/api/patients/${initialPatient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profileFields),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setEditingProfile(false);
+      setReadOnly(true);
+      // Optionally update parent state if needed
+    }
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
@@ -533,8 +582,71 @@ Severity: ${severity}`;
               <p className="text-sm">If you are experiencing a medical emergency, please contact your local hospital or emergency services immediately.</p>
             </div>
           )}
+          {initialPatient && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Health Profile</CardTitle>
+                <CardDescription>Manage your health information for better recommendations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="p-4 bg-blue-50 rounded">
+                  <div className="flex justify-between mb-2">
+                    <span>Height: {profileFields.height || '—'}</span>
+                    <span>Weight: {profileFields.weight || '—'}</span>
+                  </div>
+                  <div>Blood Type: {profileFields.bloodType || '—'}</div>
+                  <div>Allergies: {profileFields.allergies || 'none'}</div>
+                  <div>Chronic Conditions: {profileFields.chronicConditions || 'none'}</div>
+                  <div>Medications: {profileFields.medications || 'none'}</div>
+                </div>
+                <Button className="mt-4" onClick={() => setEditingProfile(true)} type="button">Edit Profile</Button>
+                <Dialog open={editingProfile} onOpenChange={setEditingProfile}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Health Profile</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">Height</label>
+                          <Input value={profileFields.height} onChange={e => setProfileFields(f => ({ ...f, height: e.target.value }))} />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">Weight</label>
+                          <Input value={profileFields.weight} onChange={e => setProfileFields(f => ({ ...f, weight: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Blood Type</label>
+                        <Input value={profileFields.bloodType} onChange={e => setProfileFields(f => ({ ...f, bloodType: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Allergies</label>
+                        <Input value={profileFields.allergies} onChange={e => setProfileFields(f => ({ ...f, allergies: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Chronic Conditions</label>
+                        <Input value={profileFields.chronicConditions} onChange={e => setProfileFields(f => ({ ...f, chronicConditions: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Medications</label>
+                        <Input value={profileFields.medications} onChange={e => setProfileFields(f => ({ ...f, medications: e.target.value }))} />
+                      </div>
+                    </div>
+                    <DialogFooter className="mt-4 flex gap-2">
+                      <Button variant="outline" onClick={() => setEditingProfile(false)} type="button">Cancel</Button>
+                      <Button onClick={handleProfileSave} type="button">Save</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          )}
+          {readOnly && !initialPatient && (
+            <Button className="mb-4" onClick={() => setReadOnly(false)} type="button">Edit</Button>
+          )}
           <Form {...form}>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               {/* Patient Card (only for logged-in users) */}
               {!isGuest && (
                 <Card className="mb-6" id="patient-section">
@@ -633,7 +745,7 @@ Severity: ${severity}`;
                             <FormControl>
                               <Input 
                                 placeholder="Enter age" 
-                                type="number" min="0" max="120" {...field} onFocus={()=>setCurrentVoiceField('age')}/>
+                                type="number" min="0" max="120" {...field} onFocus={()=>setCurrentVoiceField('age')} readOnly={readOnly}/>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -653,7 +765,7 @@ Severity: ${severity}`;
                                 disabled={loading}
                               />
                             </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} readOnly={readOnly}>
                               <FormControl>
                                 <SelectTrigger onFocus={()=>setCurrentVoiceField('gender')}><SelectValue placeholder="Select gender"/></SelectTrigger>
                               </FormControl>
@@ -717,6 +829,7 @@ Severity: ${severity}`;
                             max="120"
                             {...field}
                             onFocus={() => setCurrentVoiceField("age")}
+                            readOnly={readOnly}
                           />
                         </FormControl>
                         <FormMessage />
@@ -737,7 +850,7 @@ Severity: ${severity}`;
                             disabled={loading}
                           />
                         </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} readOnly={readOnly}>
                           <FormControl>
                             <SelectTrigger onFocus={() => setCurrentVoiceField("gender")}>
                               <SelectValue placeholder="Select gender" />
@@ -767,7 +880,7 @@ Severity: ${severity}`;
                       <VoiceAssistant onResult={handleVoiceResult} currentField={currentVoiceField==='symptoms'?'symptoms':undefined} disabled={loading}/>
                     </FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Describe your symptoms in detail" className="min-h-32" {...field} required onFocus={()=>setCurrentVoiceField('symptoms')}/>
+                      <Textarea placeholder="Describe your symptoms in detail" className="min-h-32" {...field} required onFocus={()=>setCurrentVoiceField('symptoms')} readOnly={readOnly}/>
                     </FormControl>
                     <FormDescription>
                       <span>Please describe all the symptoms you are experiencing in detail.</span>
@@ -796,6 +909,7 @@ Severity: ${severity}`;
                         placeholder="Any pre-existing health conditions, allergies, or medications"
                         {...field}
                         onFocus={() => setCurrentVoiceField('conditions')}
+                        readOnly={readOnly}
                       />
                     </FormControl>
                     <FormMessage />
@@ -816,7 +930,7 @@ Severity: ${severity}`;
                         disabled={loading}
                       />
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} readOnly={readOnly}>
                       <FormControl>
                         <SelectTrigger onFocus={() => setCurrentVoiceField('severity')}>
                           <SelectValue placeholder="Select severity" />
@@ -838,7 +952,7 @@ Severity: ${severity}`;
                 )}
               />
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={readOnly || loading}>
                 {loading ? "Processing..." : "Get Recommendations"}
               </Button>
               
@@ -999,6 +1113,7 @@ Severity: ${severity}`;
                   placeholder="e.g., 175cm or 5'9&quot;" 
                   value={editingHealthProfile.height} 
                   onChange={e => setEditingHealthProfile({ ...editingHealthProfile, height: e.target.value })}
+                  readOnly={readOnly}
                 />
               </div>
               <div>
@@ -1007,6 +1122,7 @@ Severity: ${severity}`;
                   placeholder="e.g., 70kg or 154lbs" 
                   value={editingHealthProfile.weight} 
                   onChange={e => setEditingHealthProfile({ ...editingHealthProfile, weight: e.target.value })}
+                  readOnly={readOnly}
                 />
               </div>
             </div>
@@ -1016,6 +1132,7 @@ Severity: ${severity}`;
               <BasicSelect 
                 value={editingHealthProfile.blood_type} 
                 onValueChange={val => setEditingHealthProfile({...editingHealthProfile, blood_type: val})}
+                readOnly={readOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select blood type"/>
@@ -1039,6 +1156,7 @@ Severity: ${severity}`;
                 placeholder="List any known allergies (e.g., Penicillin, Shellfish, Nuts)" 
                 value={editingHealthProfile.allergies}
                 onChange={e => setEditingHealthProfile({ ...editingHealthProfile, allergies: e.target.value })}
+                readOnly={readOnly}
               />
             </div>
             
@@ -1048,6 +1166,7 @@ Severity: ${severity}`;
                 placeholder="List any chronic conditions (e.g., Diabetes, Hypertension, Asthma)" 
                 value={editingHealthProfile.chronic_conditions}
                 onChange={e => setEditingHealthProfile({ ...editingHealthProfile, chronic_conditions: e.target.value })}
+                readOnly={readOnly}
               />
             </div>
             
@@ -1057,6 +1176,7 @@ Severity: ${severity}`;
                 placeholder="List current medications and dosages (e.g., Metformin 500mg daily)" 
                 value={editingHealthProfile.medications}
                 onChange={e => setEditingHealthProfile({ ...editingHealthProfile, medications: e.target.value })}
+                readOnly={readOnly}
               />
             </div>
           </div>

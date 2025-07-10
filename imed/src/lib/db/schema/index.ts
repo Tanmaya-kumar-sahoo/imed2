@@ -1,6 +1,8 @@
 // Export all schema tables from their respective files
 export * from './medicines';
 export * from './users';
+export { userHealthProfiles } from './users';
+export { patients } from './patients';
 
 // Export schema for Drizzle migration tools
 import * as medicineSchema from './medicines';

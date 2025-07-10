@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
 
@@ -23,6 +23,24 @@ export const patientPresets = sqliteTable("patient_presets", {
   name: text("name").notNull(),
   age: integer("age").notNull(),
   gender: text("gender").notNull().$type<"male" | "female" | "other">(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+}); 
+
+export const patients = sqliteTable("patients", {
+  id: integer("id").primaryKey({ autoIncrement: true }), // Unique patient number
+  name: text("name").notNull(),
+  age: integer("age"),
+  gender: text("gender"),
+  height: text("height"),
+  weight: text("weight"),
+  phone: text("phone").unique(),
+  address: text("address"),
+  // Health profile fields:
+  bloodType: text("blood_type"),
+  allergies: text("allergies"), // JSON or comma-separated
+  chronicConditions: text("chronic_conditions"), // JSON or comma-separated
+  medications: text("medications"), // JSON or comma-separated
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
 }); 

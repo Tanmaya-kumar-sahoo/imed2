@@ -7,12 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import { getHistoryEntries } from '@/lib/services/history-store';
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  // Add a new state for simple history
+  const [simpleHistory, setSimpleHistory] = useState<any[]>([]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -41,6 +45,14 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [session, status]);
+
+  useEffect(() => {
+    // Fetch simple history (from JSON file)
+    fetch('/api/simple-history')
+      .then(res => res.json())
+      .then(data => setSimpleHistory(data.history || []))
+      .catch(() => setSimpleHistory([]));
+  }, []);
 
   // Show loading state while checking authentication or firebase user
   if (status === "loading" || !session) {
@@ -108,7 +120,6 @@ export default function ProfilePage() {
                               {rec.createdAt
                                 ? (() => {
                                     if (typeof rec.createdAt === "number") {
-                                      // If it's a UNIX timestamp in seconds, convert to ms
                                       const ms = rec.createdAt < 1e12 ? rec.createdAt * 1000 : rec.createdAt;
                                       return new Date(ms).toLocaleDateString();
                                     } else if (typeof rec.createdAt === "string") {
@@ -119,19 +130,26 @@ export default function ProfilePage() {
                                   })()
                                 : "N/A"}
                             </span>
+                            <Button size="sm" variant="outline" onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}>
+                              {expandedIndex === index ? "Hide Details" : "Show Details"}
+                            </Button>
                           </div>
                         </CardHeader>
                         <CardContent className="py-4">
+                          {/* Collapsed view: symptoms only */}
                           <p className="font-medium mb-2">Symptoms:</p>
                           <p className="text-muted-foreground mb-4">{rec.symptoms}</p>
-                          
-                          <p className="font-medium mb-2">Severity:</p>
-                          <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            rec.severity === "severe" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                          }`}>
-                            {rec.severity || "Normal"}
-                          </div>
-                          
+                          {/* Expanded view: show full details */}
+                          {expandedIndex === index && (
+                            <div className="mt-2">
+                              <p className="font-medium mb-2">Medicine Names:</p>
+                              <p className="text-muted-foreground mb-4">{rec.medicines && rec.medicines.length > 0 ? rec.medicines.map((m: any) => m.name).join(", ") : "N/A"}</p>
+                              <p className="font-medium mb-2">Severity:</p>
+                              <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${rec.severity === "severe" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}>
+                                {rec.severity || "Normal"}
+                              </div>
+                            </div>
+                          )}
                           {rec.doctorVisitRecommended && (
                             <div className="mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded-md">
                               Doctor visit was recommended
@@ -190,6 +208,41 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
         </Tabs>
+      </div>
+      <div className="max-w-4xl mx-auto mt-10">
+        <h2 className="text-xl font-bold mb-4">Simple Recommendation History</h2>
+        {simpleHistory.length === 0 ? (
+          <p>No simple history found.</p>
+        ) : (
+          <div className="space-y-8">
+            {simpleHistory.map((entry, idx) => (
+              <div key={idx} className="border rounded p-4 bg-white shadow">
+                <div className="mb-2 text-sm text-gray-500">{new Date(entry.timestamp).toLocaleString()}</div>
+                <div className="mb-2"><b>Symptoms:</b> {entry.symptoms}</div>
+                <table className="w-full border mt-2">
+                  <thead>
+                    <tr>
+                      <th className="border px-2 py-1">Name</th>
+                      <th className="border px-2 py-1">Dose</th>
+                      <th className="border px-2 py-1">Quantity</th>
+                      <th className="border px-2 py-1">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entry.medicines.map((med: any, i: number) => (
+                      <tr key={i}>
+                        <td className="border px-2 py-1">{med.name}</td>
+                        <td className="border px-2 py-1">{med.dose}</td>
+                        <td className="border px-2 py-1">{med.quantity}</td>
+                        <td className="border px-2 py-1">{med.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

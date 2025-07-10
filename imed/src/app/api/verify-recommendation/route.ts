@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
-import { saveRecommendation } from '@/lib/services/turso-medicine-service';
+import { addHistoryEntry } from '@/lib/services/history-store';
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const saved = await saveRecommendation(data);
-    return NextResponse.json({ success: true, recommendation: saved });
+    // Save only medicines, symptoms, and timestamp
+    await addHistoryEntry({
+      medicines: data.medicines,
+      symptoms: data.symptoms,
+      timestamp: data.timestamp,
+    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error verifying recommendation:', error);
+    console.error('Error saving history:', error);
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 } 

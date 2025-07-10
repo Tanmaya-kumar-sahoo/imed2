@@ -26,6 +26,13 @@ export default function RootLayout({
           <FirebaseAuthProvider>
             <div className="flex flex-col min-h-screen">
               <Header />
+              <nav className="flex gap-4">
+                <a href="/" className="hover:underline">Home</a>
+                <a href="/about" className="hover:underline">About</a>
+                <a href="/hono" className="hover:underline">Hono API</a>
+                <a href="/contact" className="hover:underline">Contact</a>
+                <a href="/history" className="hover:underline">History</a>
+              </nav>
               <main className="flex-1">{children}</main>
               <Footer />
             </div>

@@ -203,7 +203,7 @@ export async function saveRecommendation(data: any) {
  * Get recommendations for a user
  */
 export async function getUserRecommendations(userId: string) {
-  return await db.select({
+  const recs = await db.select({
     id: recommendations.id,
     userId: recommendations.userId,
     conditionId: recommendations.conditionId,
@@ -217,6 +217,15 @@ export async function getUserRecommendations(userId: string) {
   }).from(recommendations)
     .where(eq(recommendations.userId, userId))
     .orderBy(recommendations.createdAt);
+
+  // Attach medicine names to each recommendation
+  const withMedicines = await Promise.all(
+    recs.map(async rec => {
+      const medicines = await getMedicinesForRecommendation(rec.id);
+      return { ...rec, medicines };
+    })
+  );
+  return withMedicines;
 }
 
 /**

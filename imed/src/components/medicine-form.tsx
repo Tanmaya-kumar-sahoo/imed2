@@ -470,6 +470,8 @@ Severity: ${severity}`;
 
   const handleVerifyRecommendation = async () => {
     try {
+      const symptoms = form.getValues("symptoms");
+      const timestamp = new Date().toISOString();
       const res = await fetch('/api/verify-recommendation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -477,6 +479,8 @@ Severity: ${severity}`;
           medicines: editableMeds,
           patient: healthProfile,
           recommendation: parsedResult,
+          symptoms,
+          timestamp,
         }),
       });
       if (res.ok) {

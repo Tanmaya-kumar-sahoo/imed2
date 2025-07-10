@@ -9,6 +9,8 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.18.1"
+    "drizzle-kit": "^0.31.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }

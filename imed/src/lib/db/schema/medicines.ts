@@ -50,12 +50,16 @@ export const recommendations = sqliteTable("recommendations", {
   additionalAdvice: text("additional_advice"),
   isEmergency: integer("is_emergency", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  medicinesJson: text("medicines_json", { mode: "json" }),
 });
 
 // Define a join table for recommendations and medicines
 export const recommendationMedicines = sqliteTable("recommendation_medicines", {
   recommendationId: text("recommendation_id").notNull().references(() => recommendations.id, { onDelete: "cascade" }),
   medicineId: text("medicine_id").notNull().references(() => medicines.id),
+  dose: text("dose"),
+  quantity: text("quantity"),
+  description: text("description"),
 }, (table) => ({
   pk: primaryKey({ columns: [table.recommendationId, table.medicineId] }),
 })); 

@@ -43,12 +43,6 @@ export function Header() {
             About
           </Link>
           <Link
-            href="/hono"
-            className="transition-colors hover:text-foreground/80 text-foreground/60"
-          >
-            Hono API
-          </Link>
-          <Link
             href="/contact"
             className="transition-colors hover:text-foreground/80 text-foreground/60"
           >

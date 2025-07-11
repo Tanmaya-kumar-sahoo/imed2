@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { VoiceAssistant } from "@/components/voice-assistant";
 
 // Real API call for patient search
 async function fetchPatient(query: { id?: string; name?: string }) {
@@ -67,16 +68,28 @@ export default function Home() {
                     value={searchType}
                     onChange={e => setSearchType(e.target.value as any)}
                     className="border rounded px-2 py-1"
+                    onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
                   >
                     <option value="id">Unique No</option>
                     <option value="name">Name</option>
                   </select>
-                  <Input
-                    placeholder={searchType === "id" ? "Enter Unique No" : "Enter Name"}
-                    value={searchValue}
-                    onChange={e => setSearchValue(e.target.value)}
-                    className="flex-1"
-                  />
+                  <div className="flex items-center flex-1 gap-2">
+                    <Input
+                      placeholder={searchType === "id" ? "Enter Unique No" : "Enter Name"}
+                      value={searchValue}
+                      onChange={e => setSearchValue(e.target.value)}
+                      className="flex-1"
+                      onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+                    />
+                    {/* Voice Assistant for search input - consistent with medicine form */}
+                    <VoiceAssistant 
+                      onResult={(field, val) => {
+                        if (field === "patient-search") setSearchValue(val);
+                      }}
+                      currentField={"patient-search"}
+                      disabled={loading}
+                    />
+                  </div>
                   <Button onClick={handleSearch} disabled={loading || !searchValue}>
                     {loading ? "Searching..." : "Search"}
                   </Button>

@@ -79,79 +79,11 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <Tabs defaultValue="recommendations" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+        {/* Only show Profile Settings tab */}
+        <Tabs defaultValue="settings" className="w-full">
+          <TabsList className="w-full">
             <TabsTrigger value="settings">Profile Settings</TabsTrigger>
           </TabsList>
-          <TabsContent value="recommendations" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Medicine Recommendations</CardTitle>
-                <CardDescription>
-                  View your past medicine recommendations and their details
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex items-center justify-center h-40">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : recommendations.length > 0 ? (
-                  <div className="space-y-4">
-                    {recommendations.map((rec, index) => (
-                      <Card key={index} className="overflow-hidden">
-                        <CardHeader className="bg-muted/30 py-3">
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="text-lg">{rec.condition}</CardTitle>
-                            <span className="text-xs text-muted-foreground">
-                              {rec.createdAt
-                                ? (() => {
-                                    if (typeof rec.createdAt === "number") {
-                                      // If it's a UNIX timestamp in seconds, convert to ms
-                                      const ms = rec.createdAt < 1e12 ? rec.createdAt * 1000 : rec.createdAt;
-                                      return new Date(ms).toLocaleDateString();
-                                    } else if (typeof rec.createdAt === "string") {
-                                      return new Date(rec.createdAt).toLocaleDateString();
-                                    } else {
-                                      return "N/A";
-                                    }
-                                  })()
-                                : "N/A"}
-                            </span>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="py-4">
-                          <p className="font-medium mb-2">Symptoms:</p>
-                          <p className="text-muted-foreground mb-4">{rec.symptoms}</p>
-                          
-                          <p className="font-medium mb-2">Severity:</p>
-                          <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            rec.severity === "severe" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                          }`}>
-                            {rec.severity || "Normal"}
-                          </div>
-                          
-                          {rec.doctorVisitRecommended && (
-                            <div className="mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded-md">
-                              Doctor visit was recommended
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-10">
-                    <p className="text-muted-foreground mb-4">You haven&apos;t received any recommendations yet.</p>
-                    <Button asChild>
-                      <Link href="/#medicine-form">Get Recommendations</Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
           <TabsContent value="settings" className="mt-6">
             <Card>
               <CardHeader>

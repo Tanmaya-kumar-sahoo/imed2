@@ -121,6 +121,10 @@ Patient Information:
 - Symptoms: {{symptoms}}
 - Age: {{age}}
 - Gender: {{gender}}
+- Blood type: {{bloodType}}
+- Allergies: {{allergies}}
+- Chronic conditions: {{chronicConditions}}
+- Medications: {{medications}}
 - Pre-existing conditions: {{preExistingConditions}}
 - Severity: {{severity}}
 
@@ -840,6 +844,10 @@ export async function POST(req: Request) {
     // Extract age and gender
     const age = data.age || "Not specified";
     const gender = data.gender || "Not specified";
+    const bloodType = data.bloodType || "Not specified";
+    const allergies = data.allergies || "Not specified";
+    const chronicConditions = data.chronicConditions || "Not specified";
+    const medications = data.medications || "Not specified";
     
     // Check if this is a potential emergency
     const isEmergency = detectEmergency(symptoms + " " + preExistingText);
@@ -949,6 +957,10 @@ export async function POST(req: Request) {
         .replace("{{symptoms}}", symptoms)
         .replace("{{age}}", age)
         .replace("{{gender}}", gender)
+        .replace("{{bloodType}}", bloodType)
+        .replace("{{allergies}}", allergies)
+        .replace("{{chronicConditions}}", chronicConditions)
+        .replace("{{medications}}", medications)
         .replace("{{preExistingConditions}}", preExistingText || "None")
         .replace("{{severity}}", severity);
 

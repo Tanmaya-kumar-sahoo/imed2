@@ -89,15 +89,17 @@ export default function Home() {
                       {patients.map((p: any) => (
                         <li
                           key={p.id}
-                          className="py-2 cursor-pointer hover:bg-muted rounded px-2"
-                          onClick={() => {
+                          className="py-2 flex items-center justify-between hover:bg-muted rounded px-2"
+                        >
+                          <div className="flex-1 cursor-pointer" onClick={() => {
                             setSelectedPatient(p);
                             setPatients([]); // Hide the list
-                          }}
-                        >
-                          <b>{p.name}</b> (ID: {p.id})
-                          {p.age && <span className="ml-2 text-sm text-muted-foreground">Age: {p.age}</span>}
-                          {p.phone && <span className="ml-2 text-sm text-muted-foreground">Phone: {p.phone}</span>}
+                          }}>
+                            <b>{p.name}</b> (ID: {p.id})
+                            {p.age && <span className="ml-2 text-sm text-muted-foreground">Age: {p.age}</span>}
+                            {p.phone && <span className="ml-2 text-sm text-muted-foreground">Phone: {p.phone}</span>}
+                          </div>
+                          <Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); router.push(`/patients/${p.id}/history`); }}>History</Button>
                         </li>
                       ))}
                     </ul>
@@ -107,6 +109,7 @@ export default function Home() {
                 {selectedPatient && (
                   <div className="mt-4">
                     <Button onClick={() => { setSelectedPatient(null); setNotFound(false); }} className="mb-4">Back to Search</Button>
+                    <Button onClick={() => router.push(`/patients/${selectedPatient.id}/history`)} className="ml-2">History</Button>
                     <h3 className="font-semibold mb-2">Patient Details</h3>
                     <div className="grid grid-cols-2 gap-2">
                       <div><b>Unique No:</b> {selectedPatient.id}</div>

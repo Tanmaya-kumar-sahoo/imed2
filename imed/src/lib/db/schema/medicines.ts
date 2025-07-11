@@ -58,4 +58,16 @@ export const recommendationMedicines = sqliteTable("recommendation_medicines", {
   medicineId: text("medicine_id").notNull().references(() => medicines.id),
 }, (table) => ({
   pk: primaryKey({ columns: [table.recommendationId, table.medicineId] }),
-})); 
+}));
+
+// Define the recommended_medicines_history table
+export const recommendedMedicinesHistory = sqliteTable("recommended_medicines_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  patientId: integer("patient_id").notNull(),
+  doctorId: text("doctor_id"),
+  recommendedMedicines: text("recommended_medicines").notNull(),
+  symptoms: text("symptoms"),
+  severity: text("severity"),
+  verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at").notNull().default(sql`(strftime('%s','now'))`),
+}); 

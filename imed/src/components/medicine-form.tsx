@@ -333,8 +333,10 @@ export function MedicineForm({ initialPatient, readOnly: initialReadOnly = false
   };
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: any) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     setLoading(true);
     setError("");
     setResult("");
@@ -346,11 +348,20 @@ export function MedicineForm({ initialPatient, readOnly: initialReadOnly = false
       const gender = form.getValues("gender");
       const conditions = form.getValues("conditions");
       const severity = form.getValues("severity");
-      
+      // Add health profile fields from profileFields state
+      const bloodType = profileFields.bloodType || initialPatient?.bloodType || '';
+      const allergies = profileFields.allergies || initialPatient?.allergies || '';
+      const chronicConditions = profileFields.chronicConditions || initialPatient?.chronicConditions || '';
+      const medications = profileFields.medications || initialPatient?.medications || '';
+
       const promptText = `
 Symptoms: ${symptoms}
 Age: ${age}
 Gender: ${gender}
+Blood type: ${bloodType}
+Allergies: ${allergies}
+Chronic conditions: ${chronicConditions}
+Medications: ${medications}
 Pre-existing conditions: ${conditions}
 Severity: ${severity}`;
       
@@ -367,6 +378,10 @@ Severity: ${severity}`;
           prompt: promptText,
           age: age,
           gender: gender,
+          bloodType: bloodType,
+          allergies: allergies,
+          chronicConditions: chronicConditions,
+          medications: medications,
           aiSettings: localStorage.getItem("openaiApiKey") ? { apiKey: localStorage.getItem("openaiApiKey") } : null,
           forceAI: true // Always use AI even for emergency conditions
         }),
@@ -481,12 +496,18 @@ Severity: ${severity}`;
 
   const handleVerifyRecommendation = async () => {
     try {
+      // Ensure patientId is the integer from initialPatient
+      const patientId = typeof initialPatient?.id === 'string' ? parseInt(initialPatient.id, 10) : initialPatient?.id;
       const res = await fetch('/api/verify-recommendation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           medicines: editableMeds,
-          patient: healthProfile,
+          patient: { ...healthProfile, id: patientId },
+          patientId, // explicitly pass patientId as integer
+          symptoms: form.getValues('symptoms'),
+          severity: form.getValues('severity'),
+          recommendedMedicines: JSON.stringify(editableMeds),
           recommendation: parsedResult,
         }),
       });
@@ -648,227 +669,6 @@ Severity: ${severity}`;
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               {/* Patient Card (only for logged-in users) */}
-              {!isGuest && (
-                <Card className="mb-6" id="patient-section">
-                  <CardHeader>
-                    <CardTitle>Health Profile</CardTitle>
-                    <CardDescription>
-                      Manage your health information for better recommendations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {!healthProfile && (
-                      <div className="text-center py-6">
-                        <div className="text-6xl mb-2">🏥</div>
-                        <p className="text-muted-foreground">Create your health profile for personalized recommendations.</p>
-                      </div>
-                    )}
-                    
-                    {healthProfile && (
-                      <div className="space-y-3">
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-                          <h4 className="font-medium text-blue-900 mb-2">Your Health Profile</h4>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            {healthProfile.height && (
-                              <div><span className="text-blue-700">Height:</span> {healthProfile.height}</div>
-                            )}
-                            {healthProfile.weight && (
-                              <div><span className="text-blue-700">Weight:</span> {healthProfile.weight}</div>
-                            )}
-                            {healthProfile.blood_type && (
-                              <div><span className="text-blue-700">Blood Type:</span> {healthProfile.blood_type}</div>
-                            )}
-                            {healthProfile.allergies && (
-                              <div className="col-span-2"><span className="text-blue-700">Allergies:</span> {healthProfile.allergies}</div>
-                            )}
-                            {healthProfile.chronic_conditions && (
-                              <div className="col-span-2"><span className="text-blue-700">Chronic Conditions:</span> {healthProfile.chronic_conditions}</div>
-                            )}
-                            {healthProfile.medications && (
-                              <div className="col-span-2"><span className="text-blue-700">Medications:</span> {healthProfile.medications}</div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setEditingHealthProfile({
-                                height: healthProfile.height || "",
-                                weight: healthProfile.weight || "",
-                                blood_type: healthProfile.blood_type || "",
-                                allergies: healthProfile.allergies || "",
-                                chronic_conditions: healthProfile.chronic_conditions || "",
-                                medications: healthProfile.medications || ""
-                              });
-                              setShowHealthProfileDialog(true);
-                            }}
-                          >
-                            Edit Profile
-                          </Button>
-                          <button 
-                            type="button" 
-                            className="p-2 hover:bg-red-100 rounded-md" 
-                            onClick={async() => { 
-                              if(!confirm("Delete your health profile?")) return; 
-                              const res = await fetch("/api/patient-presets", {method:"DELETE"}); 
-                              if(res.ok){ 
-                                setHealthProfile(null); 
-                                toast.success("Health profile deleted"); 
-                              } 
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600"/>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Age & Gender Inputs */}
-                    <div className="grid gap-4 grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="age"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center justify-between">
-                              <span>Age</span>
-                              <VoiceAssistant 
-                                onResult={handleVoiceResult}
-                                currentField={currentVoiceField === 'age' ? 'age' : undefined}
-                                disabled={loading}
-                              />
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter age" 
-                                type="number" min="0" max="120" {...field} onFocus={()=>setCurrentVoiceField('age')} readOnly={readOnly}/>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="gender"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center justify-between">
-                              <span>Gender</span>
-                              <VoiceAssistant 
-                                onResult={handleVoiceResult}
-                                currentField={currentVoiceField === 'gender' ? 'gender' : undefined}
-                                disabled={loading}
-                              />
-                            </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} readOnly={readOnly}>
-                              <FormControl>
-                                <SelectTrigger onFocus={()=>setCurrentVoiceField('gender')}><SelectValue placeholder="Select gender"/></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Create/Save Health Profile Button */}
-                    {!healthProfile && (
-                      <Button 
-                        type="button" 
-                        variant="secondary" 
-                        onClick={() => {
-                          setEditingHealthProfile({ 
-                            height: "", 
-                            weight: "", 
-                            blood_type: "", 
-                            allergies: "", 
-                            chronic_conditions: "", 
-                            medications: "" 
-                          }); 
-                          setShowHealthProfileDialog(true); 
-                        }}
-                      >
-                        Create Health Profile
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Age & Gender Inputs for Guest Users */}
-              {isGuest && (
-                <div className="grid gap-4 grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="age"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center justify-between">
-                          <span>Age</span>
-                          <VoiceAssistant
-                            onResult={handleVoiceResult}
-                            currentField={currentVoiceField === "age" ? "age" : undefined}
-                            disabled={loading}
-                          />
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter age"
-                            type="number"
-                            min="0"
-                            max="120"
-                            {...field}
-                            onFocus={() => setCurrentVoiceField("age")}
-                            readOnly={readOnly}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center justify-between">
-                          <span>Gender</span>
-                          <VoiceAssistant
-                            onResult={handleVoiceResult}
-                            currentField={currentVoiceField === "gender" ? "gender" : undefined}
-                            disabled={loading}
-                          />
-                        </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} readOnly={readOnly}>
-                          <FormControl>
-                            <SelectTrigger onFocus={() => setCurrentVoiceField("gender")}>
-                              <SelectValue placeholder="Select gender" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
               {/* Symptoms field moved below Patient card for better UX */}
               <FormField
                 control={form.control}
@@ -930,7 +730,7 @@ Severity: ${severity}`;
                         disabled={loading}
                       />
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} readOnly={readOnly}>
+                    <Select onValueChange={field.onChange} value={field.value} /* readOnly={readOnly} */>
                       <FormControl>
                         <SelectTrigger onFocus={() => setCurrentVoiceField('severity')}>
                           <SelectValue placeholder="Select severity" />
@@ -1097,121 +897,6 @@ Severity: ${severity}`;
           </p>
         </CardFooter>
       </Card>
-
-      {/* Health Profile creation/edit dialog */}
-      <Dialog open={showHealthProfileDialog} onOpenChange={setShowHealthProfileDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{healthProfile ? "Edit Health Profile" : "Create Health Profile"}</DialogTitle>
-            <p className="text-muted-foreground text-sm mt-1">Save your health information for personalized medicine recommendations</p>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Height</label>
-                <Input 
-                  placeholder="e.g., 175cm or 5'9&quot;" 
-                  value={editingHealthProfile.height} 
-                  onChange={e => setEditingHealthProfile({ ...editingHealthProfile, height: e.target.value })}
-                  readOnly={readOnly}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Weight</label>
-                <Input 
-                  placeholder="e.g., 70kg or 154lbs" 
-                  value={editingHealthProfile.weight} 
-                  onChange={e => setEditingHealthProfile({ ...editingHealthProfile, weight: e.target.value })}
-                  readOnly={readOnly}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-1 block">Blood Type</label>
-              <BasicSelect 
-                value={editingHealthProfile.blood_type} 
-                onValueChange={val => setEditingHealthProfile({...editingHealthProfile, blood_type: val})}
-                readOnly={readOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select blood type"/>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A+">A+</SelectItem>
-                  <SelectItem value="A-">A-</SelectItem>
-                  <SelectItem value="B+">B+</SelectItem>
-                  <SelectItem value="B-">B-</SelectItem>
-                  <SelectItem value="AB+">AB+</SelectItem>
-                  <SelectItem value="AB-">AB-</SelectItem>
-                  <SelectItem value="O+">O+</SelectItem>
-                  <SelectItem value="O-">O-</SelectItem>
-                </SelectContent>
-              </BasicSelect>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-1 block">Allergies</label>
-              <Textarea 
-                placeholder="List any known allergies (e.g., Penicillin, Shellfish, Nuts)" 
-                value={editingHealthProfile.allergies}
-                onChange={e => setEditingHealthProfile({ ...editingHealthProfile, allergies: e.target.value })}
-                readOnly={readOnly}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-1 block">Chronic Conditions</label>
-              <Textarea 
-                placeholder="List any chronic conditions (e.g., Diabetes, Hypertension, Asthma)" 
-                value={editingHealthProfile.chronic_conditions}
-                onChange={e => setEditingHealthProfile({ ...editingHealthProfile, chronic_conditions: e.target.value })}
-                readOnly={readOnly}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-1 block">Current Medications</label>
-              <Textarea 
-                placeholder="List current medications and dosages (e.g., Metformin 500mg daily)" 
-                value={editingHealthProfile.medications}
-                onChange={e => setEditingHealthProfile({ ...editingHealthProfile, medications: e.target.value })}
-                readOnly={readOnly}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowHealthProfileDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={async() => {
-              try {
-                const res = await fetch("/api/patient-presets", {
-                  method: "POST",
-                  headers: {"Content-Type": "application/json"},
-                  body: JSON.stringify(editingHealthProfile)
-                });
-                
-                if (res.ok) {
-                  const saved = await res.json();
-                  setHealthProfile(saved);
-                  toast.success("Health profile saved");
-                  setShowHealthProfileDialog(false);
-                } else {
-                  toast.error("Failed to save health profile");
-                }
-              } catch {
-                toast.error("Error saving health profile");
-              }
-            }}>
-              {healthProfile ? "Update Profile" : "Create Profile"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

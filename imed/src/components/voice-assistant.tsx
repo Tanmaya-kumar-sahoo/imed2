@@ -155,7 +155,12 @@ export function VoiceAssistant({ onResult, currentField, disabled = false }: Voi
           toast.success('Symptoms recorded via voice');
           console.log(`Voice Assistant: Set symptoms to "${transcript.trim()}"`);
           break;
-          
+        case 'patient-search':
+          // For patient search, allow both numbers and alphabets
+          onResult(fieldName, transcript.trim());
+          toast.success('Patient search input recorded via voice');
+          console.log(`Voice Assistant: Set patient search to "${transcript.trim()}"`);
+          break;
         case 'age':
           // Extract age from speech
           const ageValue = extractAge(cleanedTranscript);

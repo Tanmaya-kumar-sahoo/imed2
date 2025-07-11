@@ -335,7 +335,7 @@ export function MedicineForm({ initialPatient, readOnly: initialReadOnly = false
   // Handle form submission
   const handleSubmit = async (e: any) => {
     if (e && typeof e.preventDefault === 'function') {
-      e.preventDefault();
+    e.preventDefault();
     }
     setLoading(true);
     setError("");
@@ -353,7 +353,7 @@ export function MedicineForm({ initialPatient, readOnly: initialReadOnly = false
       const allergies = profileFields.allergies || initialPatient?.allergies || '';
       const chronicConditions = profileFields.chronicConditions || initialPatient?.chronicConditions || '';
       const medications = profileFields.medications || initialPatient?.medications || '';
-
+      
       const promptText = `
 Symptoms: ${symptoms}
 Age: ${age}
@@ -529,6 +529,8 @@ Severity: ${severity}`;
     allergies: initialPatient?.allergies || '',
     chronicConditions: initialPatient?.chronicConditions || '',
     medications: initialPatient?.medications || '',
+    age: initialPatient?.age || '',
+    gender: initialPatient?.gender || '',
   });
 
   useEffect(() => {
@@ -540,6 +542,8 @@ Severity: ${severity}`;
         allergies: initialPatient.allergies || '',
         chronicConditions: initialPatient.chronicConditions || '',
         medications: initialPatient.medications || '',
+        age: initialPatient.age || '',
+        gender: initialPatient.gender || '',
       });
     }
   }, [initialPatient]);
@@ -605,21 +609,23 @@ Severity: ${severity}`;
           )}
           {initialPatient && (
             <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>Health Profile</CardTitle>
+                  <CardHeader>
+                    <CardTitle>Health Profile</CardTitle>
                 <CardDescription>Manage your health information for better recommendations</CardDescription>
-              </CardHeader>
+                  </CardHeader>
               <CardContent>
                 <div className="p-4 bg-blue-50 rounded">
                   <div className="flex justify-between mb-2">
                     <span>Height: {profileFields.height || '—'}</span>
                     <span>Weight: {profileFields.weight || '—'}</span>
-                  </div>
+                      </div>
                   <div>Blood Type: {profileFields.bloodType || '—'}</div>
                   <div>Allergies: {profileFields.allergies || 'none'}</div>
                   <div>Chronic Conditions: {profileFields.chronicConditions || 'none'}</div>
                   <div>Medications: {profileFields.medications || 'none'}</div>
-                </div>
+                  <div>Age: {profileFields.age || '—'}</div>
+                  <div>Gender: {profileFields.gender || '—'}</div>
+                          </div>
                 <Button className="mt-4" onClick={() => setEditingProfile(true)} type="button">Edit Profile</Button>
                 <Dialog open={editingProfile} onOpenChange={setEditingProfile}>
                   <DialogContent>
@@ -653,6 +659,23 @@ Severity: ${severity}`;
                         <label className="block text-sm font-medium mb-1">Medications</label>
                         <Input value={profileFields.medications} onChange={e => setProfileFields(f => ({ ...f, medications: e.target.value }))} />
                       </div>
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">Age</label>
+                          <Input value={profileFields.age || ''} onChange={e => setProfileFields(f => ({ ...f, age: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleProfileSave(); }} />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium mb-1">Gender</label>
+                          <Select value={profileFields.gender || ''} onValueChange={val => setProfileFields(f => ({ ...f, gender: val }))}>
+                            <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                    </div>
+                      </div>
                     </div>
                     <DialogFooter className="mt-4 flex gap-2">
                       <Button variant="outline" onClick={() => setEditingProfile(false)} type="button">Cancel</Button>
@@ -660,9 +683,9 @@ Severity: ${severity}`;
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </CardContent>
-            </Card>
-          )}
+                  </CardContent>
+                </Card>
+              )}
           {readOnly && !initialPatient && (
             <Button className="mb-4" onClick={() => setReadOnly(false)} type="button">Edit</Button>
           )}
@@ -680,7 +703,7 @@ Severity: ${severity}`;
                       <VoiceAssistant onResult={handleVoiceResult} currentField={currentVoiceField==='symptoms'?'symptoms':undefined} disabled={loading}/>
                     </FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Describe your symptoms in detail" className="min-h-32" {...field} required onFocus={()=>setCurrentVoiceField('symptoms')} readOnly={readOnly}/>
+                      <Textarea placeholder="Describe your symptoms in detail" className="min-h-32" {...field} required onFocus={()=>setCurrentVoiceField('symptoms')} readOnly={readOnly} onKeyDown={e => { if (e.key === 'Enter') form.handleSubmit(handleSubmit)(e); }}/>
                     </FormControl>
                     <FormDescription>
                       <span>Please describe all the symptoms you are experiencing in detail.</span>
@@ -710,6 +733,7 @@ Severity: ${severity}`;
                         {...field}
                         onFocus={() => setCurrentVoiceField('conditions')}
                         readOnly={readOnly}
+                        onKeyDown={e => { if (e.key === 'Enter') form.handleSubmit(handleSubmit)(e); }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -732,7 +756,7 @@ Severity: ${severity}`;
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} /* readOnly={readOnly} */>
                       <FormControl>
-                        <SelectTrigger onFocus={() => setCurrentVoiceField('severity')}>
+                        <SelectTrigger onFocus={() => setCurrentVoiceField('severity')} onKeyDown={e => { if (e.key === 'Enter') form.handleSubmit(handleSubmit)(e); }}>
                           <SelectValue placeholder="Select severity" />
                         </SelectTrigger>
                       </FormControl>

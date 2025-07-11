@@ -8,7 +8,8 @@ import {
   conditions,
   medicineConditions,
   recommendations,
-  recommendationMedicines
+  recommendationMedicines,
+  recommendedMedicinesHistory
 } from '../db/schema';
 
 /**
@@ -171,32 +172,26 @@ export async function getMedicinesForCondition(conditionId: string) {
  * Save a recommendation
  */
 export async function saveRecommendation(data: any) {
-  const id = uuidv4();
-  
-  // First, create the recommendation
-  const recommendation = await db.insert(recommendations).values({
-    id,
-    userId: data.userId,
-    conditionId: data.conditionId,
-    symptoms: data.symptoms,
-    age: data.age,
-    gender: data.gender,
-    severity: data.severity,
-    additionalAdvice: data.additionalAdvice,
-    isEmergency: data.isEmergency
-  }).returning().then(rows => rows[0]);
-  
-  // Then, associate medicines with this recommendation
-  if (data.medicineIds && data.medicineIds.length > 0) {
-    await db.insert(recommendationMedicines).values(
-      data.medicineIds.map((medicineId: string) => ({
-        recommendationId: id,
-        medicineId
-      }))
-    );
+  try {
+    console.log('Saving recommendation:', data);
+    if (!data.patientId) {
+      throw new Error('Missing patientId (integer) for recommended_medicines_history');
+    }
+    const result = await db.insert(recommendedMedicinesHistory).values({
+      patientId: data.patientId, // must be integer
+      doctorId: data.doctorId, // should be userId of the doctor
+      recommendedMedicines: data.recommendedMedicines,
+      symptoms: data.symptoms,
+      severity: data.severity,
+      verified: true,
+      createdAt: Math.floor(Date.now() / 1000),
+    }).returning().then(rows => rows[0]);
+    console.log('Saved successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Error saving recommendation:', error);
+    throw error;
   }
-  
-  return recommendation;
 }
 
 /**

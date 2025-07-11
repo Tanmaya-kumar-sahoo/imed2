@@ -1,10 +1,141 @@
+"use client";
+
 import { Hero } from "@/components/hero";
 import { MedicineForm } from "@/components/medicine-form";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+
+// Real API call for patient search
+async function fetchPatient(query: { id?: string; name?: string }) {
+  const params = new URLSearchParams(query as any).toString();
+  const res = await fetch(`/api/patients?${params}`);
+  if (!res.ok) return null;
+  return await res.json();
+}
 
 export default function Home() {
+  const [searchValue, setSearchValue] = useState("");
+  const [searchType, setSearchType] = useState<"id" | "name">("id");
+  const [patients, setPatients] = useState<any[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setSelectedPatient(null);
+    setNotFound(false);
+    setPatients([]);
+    const result = await fetchPatient(
+      searchType === "id"
+        ? { id: searchValue.trim() }
+        : { name: searchValue.trim() }
+    );
+    if (searchType === "id") {
+      if (result) {
+        setSelectedPatient(result);
+      } else {
+        setNotFound(true);
+      }
+    } else {
+      if (Array.isArray(result) && result.length > 0) {
+        setPatients(result);
+      } else {
+        setNotFound(true);
+      }
+    }
+    setLoading(false);
+  };
+
   return (
     <main className="min-h-screen">
       <Hero />
+      <section id="patient-search" className="py-10 bg-background">
+        <div className="container">
+          <div className="mx-auto max-w-2xl">
+            <Card>
+              <CardHeader>
+                <CardTitle>Patient Search</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-4">
+                  <select
+                    value={searchType}
+                    onChange={e => setSearchType(e.target.value as any)}
+                    className="border rounded px-2 py-1"
+                  >
+                    <option value="id">Unique No</option>
+                    <option value="name">Name</option>
+                  </select>
+                  <Input
+                    placeholder={searchType === "id" ? "Enter Unique No" : "Enter Name"}
+                    value={searchValue}
+                    onChange={e => setSearchValue(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleSearch} disabled={loading || !searchValue}>
+                    {loading ? "Searching..." : "Search"}
+                  </Button>
+                </div>
+                {/* Show list of patients if searching by name and results found */}
+                {patients.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="font-semibold mb-2">Matching Patients</h3>
+                    <ul className="divide-y divide-gray-200">
+                      {patients.map((p: any) => (
+                        <li
+                          key={p.id}
+                          className="py-2 flex items-center justify-between hover:bg-muted rounded px-2"
+                        >
+                          <div className="flex-1 cursor-pointer" onClick={() => {
+                            setSelectedPatient(p);
+                            setPatients([]); // Hide the list
+                          }}>
+                            <b>{p.name}</b> (ID: {p.id})
+                            {p.age && <span className="ml-2 text-sm text-muted-foreground">Age: {p.age}</span>}
+                            {p.phone && <span className="ml-2 text-sm text-muted-foreground">Phone: {p.phone}</span>}
+                          </div>
+                          <Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); router.push(`/patients/${p.id}/history`); }}>History</Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {/* Show selected patient details */}
+                {selectedPatient && (
+                  <div className="mt-4">
+                    <Button onClick={() => { setSelectedPatient(null); setNotFound(false); }} className="mb-4">Back to Search</Button>
+                    <Button onClick={() => router.push(`/patients/${selectedPatient.id}/history`)} className="ml-2">History</Button>
+                    <h3 className="font-semibold mb-2">Patient Details</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><b>Unique No:</b> {selectedPatient.id}</div>
+                      <div><b>Name:</b> {selectedPatient.name}</div>
+                      <div><b>Age:</b> {selectedPatient.age}</div>
+                      <div><b>Phone:</b> {selectedPatient.phone}</div>
+                      <div><b>Address:</b> {selectedPatient.address}</div>
+                      <div><b>Blood Type:</b> {selectedPatient.bloodType}</div>
+                      <div><b>Allergies:</b> {selectedPatient.allergies}</div>
+                      <div><b>Chronic Conditions:</b> {selectedPatient.chronicConditions}</div>
+                      <div><b>Medications:</b> {selectedPatient.medications}</div>
+                    </div>
+                  </div>
+                )}
+                {notFound && (
+                  <div className="mt-4">
+                    <p>No patient found.</p>
+                    <Button className="mt-2" onClick={() => router.push("/patients/create")}>Create New Patient</Button>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter></CardFooter>
+            </Card>
+          </div>
+        </div>
+      </section>
       
       <section id="medicine-form" className="py-20 bg-muted/30">
         <div className="container">
@@ -18,7 +149,7 @@ export default function Home() {
             
             {/* Notice removed since fallback is no longer used */}
             
-            <MedicineForm />
+            <MedicineForm initialPatient={selectedPatient || undefined} readOnly={!!selectedPatient} />
           </div>
         </div>
       </section>
